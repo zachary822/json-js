@@ -40,7 +40,6 @@ export const tail = <A>(xs: List<A>): List<A> =>
       flag ? acc(false) : Cons(x, acc(false)),
     (_flag: boolean) => Nil,
   )(true);
-
 export const length = <A>(xs: List<A>): number => xs((_h, t) => 1 + t, 0);
 export const append =
   <A>(xs: List<A>, ys: List<A>): List<A> =>
@@ -48,6 +47,15 @@ export const append =
     xs(cons, ys(cons, nil));
 export const reverse = <A>(xs: List<A>): List<A> =>
   xs((h, t) => append(t, Cons(h, Nil)), Nil);
+export const take = <A>(n: number, xs: List<A>): List<A> =>
+  n === 0 ? Nil : xs((h, t) => Cons(h, take(n - 1, t)), Nil);
+export const drop = <A>(n: number, xs: List<A>): List<A> =>
+  xs(
+    (x: A, f: (n: number) => List<A>) => (i: number) =>
+      i < n ? f(i + 1) : Cons(x, f(i + 1)),
+    (_n) => Nil,
+  )(0);
+
 export const fmapList = <A, B>(f: (a: A) => B, xs: List<A>): List<B> =>
   xs((h, t) => Cons(f(h), t), Nil);
 
@@ -152,7 +160,7 @@ export const lookahead =
 
 // helper parsers
 
-const isSpace = (x: string) => x === " " || x === "\n" || x === "\t";
+const isSpace = (x: string) => /\s/.test(x);
 export const space = manyParser(satisfyP(isSpace));
 
 const isDigit = (x: string) => /\d/.test(x);
