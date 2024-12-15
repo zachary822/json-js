@@ -3,7 +3,7 @@
 Parser combinator implemented in church encoded types.
 
 ```typescript
-const input = '"abc"';
+const input = strToList('"abc"');
 
 const maybeParse = jsonValue(input);
 
