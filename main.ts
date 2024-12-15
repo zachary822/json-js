@@ -154,7 +154,7 @@ export const count = <A>(n: number, p: Parser<A>): Parser<List<A>> =>
 
 // helper parsers
 
-const isSpace = (x: string): boolean => /\s/.test(x);
+const isSpace = (x: string): boolean => /[ \n\r\t]/.test(x);
 export const space: Parser<List<string>> = manyParser(satisfyP(isSpace));
 
 const isDigit = (x: string) => /\d/.test(x);
