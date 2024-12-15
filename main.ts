@@ -13,12 +13,12 @@ export const altMaybe = <A>(ma: Maybe<A>, mb: Maybe<A>): Maybe<A> =>
   ma(mb, (x) => Just(x));
 
 export type Pair<A, B> = <R>(f: (a: A, b: B) => R) => R;
-export const pair = <A, B>(a: A, b: B): Pair<A, B> => (f) => f(a, b);
+export const mkPair = <A, B>(a: A, b: B): Pair<A, B> => (f) => f(a, b);
 
 export const fst = <A, B>(p: Pair<A, B>) => p((a, _b) => a);
 export const snd = <A, B>(p: Pair<A, B>) => p((_a, b) => b);
 export const fmapPair = <A, B, R>(f: (a: B) => R, p: Pair<A, B>): Pair<A, R> =>
-  pair(fst(p), f(snd(p)));
+  mkPair(fst(p), f(snd(p)));
 
 export type List<A> = <R>(cons: (a: A, r: R) => R, nil: R) => R;
 // deno-lint-ignore no-explicit-any
@@ -72,12 +72,12 @@ const flip = <A, B, R>(f: (a: A) => (b: B) => R) => (b: B) => (a: A) => f(a)(b);
 const constFunc = <A, B>(a: A) => (_b: B): A => a;
 
 export const pureParser = <A>(a: A): Parser<A> => (input) =>
-  Just(pair(input, a));
+  Just(mkPair(input, a));
 export const apParser =
   <A, B>(pf: Parser<(a: A) => B>, px: Parser<A>): Parser<B> => (input) =>
     pf(input)(
       Nothing,
-      (a) => px(fst(a))(Nothing, (b) => Just(pair(fst(b), snd(a)(snd(b))))),
+      (a) => px(fst(a))(Nothing, (b) => Just(mkPair(fst(b), snd(a)(snd(b))))),
     );
 
 export const apLeftParser = <A, B>(pa: Parser<A>, pb: Parser<B>): Parser<A> =>
@@ -98,8 +98,8 @@ export const someParser = <A>(v: Parser<A>): Parser<List<A>> => (input) =>
     return length(remainingInput) >= length(input)
       ? Nothing
       : manyParser(v)(remainingInput)(
-        Just(pair(remainingInput, Cons(snd(first), Nil))),
-        (rest) => Just(pair(fst(rest), Cons(snd(first), snd(rest)))),
+        Just(mkPair(remainingInput, Cons(snd(first), Nil))),
+        (rest) => Just(mkPair(fst(rest), Cons(snd(first), snd(rest)))),
       );
   });
 
@@ -107,7 +107,7 @@ export const satisfyP =
   (f: (a: string) => boolean): Parser<string> => (input) =>
     maybeHead(input)(
       Nothing,
-      (h) => f(h) ? Just(pair(tail(input), h)) : Nothing,
+      (h) => f(h) ? Just(mkPair(tail(input), h)) : Nothing,
     );
 
 export const sequenceAListParser = <A>(xs: List<Parser<A>>): Parser<List<A>> =>
@@ -133,7 +133,7 @@ const sepBy = <A, B>(element: Parser<A>, sep: Parser<B>): Parser<List<A>> =>
 export const optional = <A>(p: Parser<A>): Parser<Maybe<A>> =>
   altParser(fmapParser(Just, p), pureParser(Nothing));
 export const lookahead = <A>(p: Parser<A>): Parser<A> => (input) =>
-  p(input)(Nothing, (r) => Just(pair(input, snd(r))));
+  p(input)(Nothing, (r) => Just(mkPair(input, snd(r))));
 
 // helper parsers
 
@@ -284,7 +284,7 @@ const jsonArray: Parser<JsonValue[]> = (input) =>
 const kvPair = (input: List<string>) =>
   apParser(
     fmapParser(
-      (k: List<string>) => (v: JsonValue) => pair(k, v),
+      (k: List<string>) => (v: JsonValue) => mkPair(k, v),
       apLeftParser(stringLiteral, space),
     ),
     apRightParser(charP(":"), apRightParser(space, jsonValue)),
