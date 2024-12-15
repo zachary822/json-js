@@ -68,12 +68,12 @@ export const listToStr = (xs: List<string>): string =>
 
 // Helpers
 
-export const flip = <A, B, R>(f: (a: A) => (b: B) => R) => (b: B) => (a: A) =>
-  f(a)(b);
+export const flip =
+  <A, B, R>(f: (a: A) => (b: B) => R) => (b: B) => (a: A): R => f(a)(b);
 export const constFunc = <A, B>(a: A) => (_b: B): A => a;
-export const curry = <A, B, R>(f: (a: A, b: B) => R) => (a: A) => (b: B) =>
+export const curry = <A, B, R>(f: (a: A, b: B) => R) => (a: A) => (b: B): R =>
   f(a, b);
-export const uncurry = <A, B, R>(f: (a: A) => (b: B) => R) => (a: A, b: B) =>
+export const uncurry = <A, B, R>(f: (a: A) => (b: B) => R) => (a: A, b: B): R =>
   f(a)(b);
 
 // Parser combinator
@@ -138,7 +138,7 @@ export const stringP = (xs: List<string>): Parser<List<string>> =>
 
 const sepBy = <A, B>(element: Parser<A>, sep: Parser<B>): Parser<List<A>> =>
   apParser(
-    fmapParser(curry<A, List<A>, List<A>>(Cons), element),
+    fmapParser(curry(Cons<A>), element),
     manyParser(seqRightParser(sep, element)),
   );
 
@@ -298,7 +298,7 @@ const jsonArray: Parser<JsonValue[]> = (input) =>
 const kvPair = (input: List<string>) =>
   apParser(
     fmapParser(
-      curry<List<string>, JsonValue, Pair<List<string>, JsonValue>>(Pair),
+      curry(Pair<List<string>, JsonValue>),
       seqLeftParser(stringLiteral, space),
     ),
     seqRightParser(charP(":"), seqRightParser(space, jsonValue)),
