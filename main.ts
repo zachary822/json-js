@@ -1,7 +1,4 @@
-/**
- * Parser combinator implemented in Church encoded types
- * @module
- */
+// Church encoded types
 
 export type Maybe<A> = <R>(nothing: R, just: (r: A) => R) => R;
 export const Just = <A>(x: A): Maybe<A> => (_nothing, just) => just(x);
