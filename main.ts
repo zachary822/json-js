@@ -160,13 +160,4 @@ const jsonBool: Parser<JsonValue> = altParser(
   apRightParser(stringP(strToList("false")), pureParser(false)),
 );
 
-const jsonValue: Parser<JsonValue> = altParser(jsonString, jsonBool);
-
-const thing = strToList('"yay2');
-
-console.log(
-  jsonValue(thing)(
-    "nothing",
-    (x) => `leftover: ${listToStr(fst(x))} result: ${snd(x)}`,
-  ),
-);
+export const jsonValue: Parser<JsonValue> = altParser(jsonString, jsonBool);

@@ -1,6 +1,20 @@
 import { assertEquals } from "@std/assert";
-import { add } from "./main.ts";
+import { strToList, jsonValue, snd } from "./main.ts";
 
-Deno.test(function addTest() {
-  assertEquals(add(2, 3), 5);
+Deno.test("should return null for bad input", () => {
+  const thing = strToList('"yay2');
+
+  assertEquals(
+    null,
+    jsonValue(thing)(null, (x) => snd(x)),
+  );
+});
+
+Deno.test("should return string for good input", () => {
+  const thing = strToList('"yay2"');
+
+  assertEquals(
+    "yay2",
+    jsonValue(thing)(null, (x) => snd(x)),
+  );
 });
