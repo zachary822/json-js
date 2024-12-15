@@ -83,15 +83,9 @@ export const pureParser =
 export const apParser =
   <A, B>(pf: Parser<(a: A) => B>, px: Parser<A>): Parser<B> =>
   (input) =>
-    pf(input)(Nothing, (a) => {
-      const input1 = fst(a);
-      const f = snd(a);
-      return px(input1)(Nothing, (b) => {
-        const input2 = fst(b);
-        const x = snd(b);
-        return Just(pair(input2, f(x)));
-      });
-    });
+    pf(input)(Nothing, (a) =>
+      px(fst(a))(Nothing, (b) => Just(pair(fst(b), snd(a)(snd(b))))),
+    );
 
 export const apLeftParser = <A, B>(pa: Parser<A>, pb: Parser<B>): Parser<A> =>
   apParser(fmapParser(constFunc, pa), pb);
