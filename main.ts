@@ -73,6 +73,12 @@ export const curry = <A, B, R>(f: (a: A, b: B) => R) => (a: A) => (b: B): R =>
 export const uncurry = <A, B, R>(f: (a: A) => (b: B) => R) => (a: A, b: B): R =>
   f(a)(b);
 
+export const lookup = <K, V>(key: K, xs: List<Pair<K, V>>): Maybe<V> =>
+  xs(
+    (h, t) => fst(h) === key ? Just(snd(h)) : t,
+    Nothing as Maybe<V>,
+  );
+
 // Parser combinator
 
 export type Parser<A> = (input: List<string>) => Maybe<Pair<List<string>, A>>;
@@ -176,24 +182,38 @@ const unicodeEscape = fmapParser(
   ),
 );
 
-const escapeMap: { [key: string]: string } = {
-  '"': '"',
-  "\\": "\\",
-  "/": "/",
-  b: "\b",
-  f: "\f",
-  n: "\n",
-  r: "\r",
-  t: "\t",
-};
+const escapeMap: List<Pair<string, string>> = Cons(
+  Pair('"', '"'),
+  Cons(
+    Pair("\\", "\\"),
+    Cons(
+      Pair("/", "/"),
+      Cons(
+        Pair("b", "\b"),
+        Cons(
+          Pair("f", "\f"),
+          Cons(
+            Pair("n", "\n"),
+            Cons(Pair("r", "\r"), Cons(Pair("t", "\t"), Nil)),
+          ),
+        ),
+      ),
+    ),
+  ),
+);
 
 const escapedChar = seqRightParser(
   charP("\\"),
   altParser(
-    fmapParser(
-      (c) => escapeMap[c],
-      satisfyP((c) => Object.hasOwn(escapeMap, c)),
-    ),
+    (input) =>
+      maybeHead(input)(
+        Nothing,
+        (h) =>
+          lookup(h, escapeMap)(
+            Nothing,
+            (v) => Just(Pair(tail(input), v)),
+          ),
+      ),
     unicodeEscape,
   ),
 );
