@@ -100,21 +100,22 @@ export const altParser =
   <A>(p1: Parser<A>, p2: Parser<A>): Parser<A> =>
   (input: List<string>) =>
     altMaybe(p1(input), p2(input));
-export const manyParser = <A>(p: Parser<A>): Parser<List<A>> =>
-  altParser(
-    (input: List<string>) =>
-      p(input)(Nothing, (first) => {
-        const remainingInput = fst(first);
-        const firstResult = snd(first);
-        if (length(remainingInput) >= length(input)) {
-          return Nothing;
-        }
-        return manyParser(p)(remainingInput)(Nothing, (rest) =>
-          Just(pair(fst(rest), Cons(firstResult, snd(rest)))),
-        );
-      }),
-    pureParser(Nil),
-  );
+export const manyParser = <A>(v: Parser<A>): Parser<List<A>> =>
+  altParser(someParser(v), pureParser(Nil));
+export const someParser =
+  <A>(v: Parser<A>): Parser<List<A>> =>
+  (input) =>
+    v(input)(Nothing, (first) => {
+      const remainingInput = fst(first);
+
+      return length(remainingInput) >= length(input)
+        ? Nothing
+        : manyParser(v)(remainingInput)(
+            Just(pair(remainingInput, Cons(snd(first), Nil))),
+            (rest) => Just(pair(fst(rest), Cons(snd(first), snd(rest)))),
+          );
+    });
+
 export const satisfyP =
   (f: (a: string) => boolean): Parser<string> =>
   (input) => {
