@@ -84,9 +84,9 @@ export const apParser =
       (a) => px(fst(a))(Nothing, (b) => Just(Pair(fst(b), snd(a)(snd(b))))),
     );
 
-export const apLeftParser = <A, B>(pa: Parser<A>, pb: Parser<B>): Parser<A> =>
+export const seqLeftParser = <A, B>(pa: Parser<A>, pb: Parser<B>): Parser<A> =>
   apParser(fmapParser(constFunc, pa), pb);
-export const apRightParser = <A, B>(pa: Parser<A>, pb: Parser<B>): Parser<B> =>
+export const seqRightParser = <A, B>(pa: Parser<A>, pb: Parser<B>): Parser<B> =>
   apParser(fmapParser(flip(constFunc), pa), pb);
 
 export const emptyParser = (_input: List<string>) => Nothing;
@@ -131,7 +131,7 @@ export const stringP = (xs: List<string>): Parser<List<string>> =>
 const sepBy = <A, B>(element: Parser<A>, sep: Parser<B>): Parser<List<A>> =>
   apParser(
     fmapParser((x) => (xs: List<A>) => Cons(x, xs), element),
-    manyParser(apRightParser(sep, element)),
+    manyParser(seqRightParser(sep, element)),
   );
 
 export const optional = <A>(p: Parser<A>): Parser<Maybe<A>> =>
@@ -150,7 +150,7 @@ const isHexDigit = (a: string) => /[0-9A-Fa-f]/.test(a);
 
 const unicodeEscape = fmapParser(
   (xs: List<string>) => String.fromCharCode(parseInt(listToStr(xs), 16)),
-  apRightParser(
+  seqRightParser(
     charP("u"),
     apParser(
       apParser(
@@ -180,7 +180,7 @@ const escapeMap: { [key: string]: string } = {
   t: "\t",
 };
 
-const escapedChar = apRightParser(
+const escapedChar = seqRightParser(
   charP("\\"),
   altParser(
     fmapParser(
@@ -201,8 +201,8 @@ export type JsonValue =
   | { [key: string]: JsonValue }
   | JsonValue[];
 
-const stringLiteral = apLeftParser(
-  apRightParser(
+const stringLiteral = seqLeftParser(
+  seqRightParser(
     charP('"'),
     manyParser(altParser(satisfyP(isUnescapedChar), escapedChar)),
   ),
@@ -212,8 +212,8 @@ const stringLiteral = apLeftParser(
 const jsonString: Parser<JsonValue> = fmapParser(listToStr, stringLiteral);
 
 const jsonBool = altParser(
-  apRightParser(stringP(strToList("true")), pureParser(true)),
-  apRightParser(stringP(strToList("false")), pureParser(false)),
+  seqRightParser(stringP(strToList("true")), pureParser(true)),
+  seqRightParser(stringP(strToList("false")), pureParser(false)),
 );
 
 const intLiteral = apParser(
@@ -265,23 +265,23 @@ const jsonNumber = fmapParser(
   ),
 );
 
-const jsonNull = apRightParser(stringP(strToList("null")), pureParser(null));
+const jsonNull = seqRightParser(stringP(strToList("null")), pureParser(null));
 
 const jsonArray: Parser<JsonValue[]> = (input) =>
   fmapParser(
     (xs: List<JsonValue>) => listToArray(xs),
-    apLeftParser(
-      apRightParser(
+    seqLeftParser(
+      seqRightParser(
         charP("["),
-        apRightParser(
+        seqRightParser(
           space,
           sepBy(
             jsonValue,
-            apLeftParser(apRightParser(space, charP(",")), space),
+            seqLeftParser(seqRightParser(space, charP(",")), space),
           ),
         ),
       ),
-      apLeftParser(space, charP("]")),
+      seqLeftParser(space, charP("]")),
     ),
   )(input);
 
@@ -289,9 +289,9 @@ const kvPair = (input: List<string>) =>
   apParser(
     fmapParser(
       (k: List<string>) => (v: JsonValue) => Pair(k, v),
-      apLeftParser(stringLiteral, space),
+      seqLeftParser(stringLiteral, space),
     ),
-    apRightParser(charP(":"), apRightParser(space, jsonValue)),
+    seqRightParser(charP(":"), seqRightParser(space, jsonValue)),
   )(input);
 
 const jsonObject = fmapParser(
@@ -300,11 +300,11 @@ const jsonObject = fmapParser(
       (h, t) => ({ ...t, [listToStr(fst(h))]: snd(h) }),
       {} as { [key: string]: JsonValue },
     ),
-  apLeftParser(
-    apLeftParser(
-      apRightParser(
-        apRightParser(charP("{"), space),
-        sepBy(kvPair, apRightParser(space, apLeftParser(charP(","), space))),
+  seqLeftParser(
+    seqLeftParser(
+      seqRightParser(
+        seqRightParser(charP("{"), space),
+        sepBy(kvPair, seqRightParser(space, seqLeftParser(charP(","), space))),
       ),
       space,
     ),
