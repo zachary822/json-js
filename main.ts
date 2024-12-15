@@ -5,6 +5,7 @@ export const Just =
   <A>(x: A): Maybe<A> =>
   (_nothing, just) =>
     just(x);
+// deno-lint-ignore no-explicit-any
 export const Nothing: Maybe<any> = (nothing, _just) => nothing;
 
 export const fmapMaybe = <A, R>(f: (a: A) => R, m: Maybe<A>): Maybe<R> =>
@@ -26,6 +27,7 @@ export const fmapPair = <A, B, R>(f: (a: B) => R, p: Pair<A, B>): Pair<A, R> =>
   pair(fst(p), f(snd(p)));
 
 export type List<A> = <R>(cons: (a: A, r: R) => R, nil: R) => R;
+// deno-lint-ignore no-explicit-any
 export const Nil: List<any> = (_cons, nil) => nil;
 export const Cons =
   <A>(x: A, xs: List<A>): List<A> =>
