@@ -1,3 +1,5 @@
+// Church encoded types
+
 export type Maybe<A> = <R>(nothing: R, just: (r: A) => R) => R;
 export const Just =
   <A>(x: A): Maybe<A> =>
@@ -30,8 +32,8 @@ export const Cons =
   (cons, nil) =>
     cons(x, xs(cons, nil));
 
-// @ts-expect-error
-export const head = <A>(xs: List<A>): A => xs((h, _t) => h, null);
+export const maybeHead = <A>(xs: List<A>): Maybe<A> =>
+  xs((h, _t) => Just(h), Nothing);
 export const tail = <A>(xs: List<A>): List<A> =>
   xs(
     (x: A, acc: (flag: boolean) => List<A>) => (flag: boolean) =>
@@ -48,13 +50,14 @@ export const reverse = <A>(xs: List<A>): List<A> =>
   xs((h, t) => append(t, Cons(h, Nil)), Nil);
 export const fmapList = <A, B>(f: (a: A) => B, xs: List<A>): List<B> =>
   xs((h, t) => Cons(f(h), t), Nil);
-export const isEmpty = <A>(xs: List<A>): boolean => xs((_h, _t) => true, false);
 
 export const strToList = (s: string): List<string> =>
   Array.from(s)
     .toReversed()
     .reduce((xs, x) => Cons(x, xs), Nil as List<string>);
 export const listToStr = (xs: List<string>) => xs((y, ys) => y + ys, "");
+
+// Parser combinator
 
 export type Parser<A> = (input: List<string>) => Maybe<Pair<List<string>, A>>;
 
@@ -118,10 +121,10 @@ export const someParser =
 
 export const satisfyP =
   (f: (a: string) => boolean): Parser<string> =>
-  (input) => {
-    const h = head(input);
-    return f(h) ? Just(pair(tail(input), h)) : Nothing;
-  };
+  (input) =>
+    maybeHead(input)(Nothing, (h) =>
+      f(h) ? Just(pair(tail(input), h)) : Nothing,
+    );
 
 export const sequenceAListParser = <A>(xs: List<Parser<A>>): Parser<List<A>> =>
   xs(
@@ -136,6 +139,8 @@ export const sequenceAListParser = <A>(xs: List<Parser<A>>): Parser<List<A>> =>
 export const charP = (x: string) => satisfyP((i) => x === i);
 export const stringP = (xs: List<string>): Parser<List<string>> =>
   sequenceAListParser(fmapList(charP, xs));
+
+// JSON parser
 
 type JsonString = string;
 type JsonBool = boolean;
@@ -157,7 +162,7 @@ const jsonBool: Parser<JsonValue> = altParser(
 
 const jsonValue: Parser<JsonValue> = altParser(jsonString, jsonBool);
 
-const thing = strToList('"yay2"');
+const thing = strToList('"yay2');
 
 console.log(
   jsonValue(thing)(
