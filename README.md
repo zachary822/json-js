@@ -7,7 +7,7 @@ const input = '"abc"';
 
 const maybeParse = jsonValue(input);
 
-// to retrieving the value from Maybe
+// retrieving the value from Maybe
 const result = maybeParse(
     // result if Nothing
     null,
