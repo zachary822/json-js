@@ -35,7 +35,7 @@ export const tail = <A>(xs: List<A>): List<A> =>
   xs(
     (x: A, acc: (flag: boolean) => List<A>) => (flag: boolean) =>
       flag ? acc(false) : Cons(x, acc(false)),
-    (_flag: boolean) => Nil,
+    constFunc(Nil),
   )(true);
 export const length = <A>(xs: List<A>): number => xs((_h, t) => 1 + t, 0);
 export const append = <A>(xs: List<A>, ys: List<A>): List<A> => (cons, nil) =>
@@ -48,8 +48,10 @@ export const drop = <A>(n: number, xs: List<A>): List<A> =>
   xs(
     (x: A, f: (n: number) => List<A>) => (i: number) =>
       i < n ? f(i + 1) : Cons(x, f(i + 1)),
-    (_n) => Nil,
+    constFunc(Nil),
   )(0);
+export const replicate = <A>(n: number, element: A): List<A> =>
+  n <= 0 ? Nil : Cons(element, replicate(n - 1, element));
 
 export const fmapList = <A, B>(f: (a: A) => B, xs: List<A>): List<B> =>
   xs((h, t) => Cons(f(h), t), Nil);
@@ -64,6 +66,16 @@ export const strToList = (s: string): List<string> =>
 export const listToStr = (xs: List<string>): string =>
   xs((y, ys) => y + ys, "");
 
+// Helpers
+
+export const flip = <A, B, R>(f: (a: A) => (b: B) => R) => (b: B) => (a: A) =>
+  f(a)(b);
+export const constFunc = <A, B>(a: A) => (_b: B): A => a;
+export const curry = <A, B, R>(f: (a: A, b: B) => R) => (a: A) => (b: B) =>
+  f(a, b);
+export const uncurry = <A, B, R>(f: (a: A) => (b: B) => R) => (a: A, b: B) =>
+  f(a)(b);
+
 // Parser combinator
 
 export type Parser<A> = (input: List<string>) => Maybe<Pair<List<string>, A>>;
@@ -71,9 +83,6 @@ export type Parser<A> = (input: List<string>) => Maybe<Pair<List<string>, A>>;
 export const fmapParser =
   <A, R>(f: (a: A) => R, p: Parser<A>): Parser<R> => (input: List<string>) =>
     fmapMaybe((b) => fmapPair(f, b), p(input));
-
-const flip = <A, B, R>(f: (a: A) => (b: B) => R) => (b: B) => (a: A) => f(a)(b);
-const constFunc = <A, B>(a: A) => (_b: B): A => a;
 
 export const pureParser = <A>(a: A): Parser<A> => (input) =>
   Just(Pair(input, a));
@@ -107,37 +116,38 @@ export const someParser = <A>(v: Parser<A>): Parser<List<A>> => (input) =>
       );
   });
 
+export const sequenceAListParser = <A>(xs: List<Parser<A>>): Parser<List<A>> =>
+  xs(
+    (h, t) =>
+      apParser(
+        fmapParser(curry(Cons), h),
+        t,
+      ),
+    pureParser(Nil as List<A>),
+  );
+
 export const satisfyP =
   (f: (a: string) => boolean): Parser<string> => (input) =>
     maybeHead(input)(
       Nothing,
       (h) => f(h) ? Just(Pair(tail(input), h)) : Nothing,
     );
-
-export const sequenceAListParser = <A>(xs: List<Parser<A>>): Parser<List<A>> =>
-  xs(
-    (h, t) =>
-      apParser(
-        fmapParser((a) => (as) => Cons(a, as), h),
-        t,
-      ),
-    pureParser(Nil as List<A>),
-  );
-
 export const charP = (x: string): Parser<string> => satisfyP((i) => x === i);
 export const stringP = (xs: List<string>): Parser<List<string>> =>
   sequenceAListParser(fmapList(charP, xs));
 
 const sepBy = <A, B>(element: Parser<A>, sep: Parser<B>): Parser<List<A>> =>
   apParser(
-    fmapParser((x) => (xs: List<A>) => Cons(x, xs), element),
+    fmapParser(curry<A, List<A>, List<A>>(Cons), element),
     manyParser(seqRightParser(sep, element)),
   );
 
 export const optional = <A>(p: Parser<A>): Parser<Maybe<A>> =>
   altParser(fmapParser(Just, p), pureParser(Nothing));
-export const lookahead = <A>(p: Parser<A>): Parser<A> => (input) =>
+export const lookAhead = <A>(p: Parser<A>): Parser<A> => (input) =>
   p(input)(Nothing, (r) => Just(Pair(input, snd(r))));
+export const count = <A>(n: number, p: Parser<A>): Parser<List<A>> =>
+  sequenceAListParser(replicate(n, p));
 
 // helper parsers
 
@@ -288,7 +298,7 @@ const jsonArray: Parser<JsonValue[]> = (input) =>
 const kvPair = (input: List<string>) =>
   apParser(
     fmapParser(
-      (k: List<string>) => (v: JsonValue) => Pair(k, v),
+      curry<List<string>, JsonValue, Pair<List<string>, JsonValue>>(Pair),
       seqLeftParser(stringLiteral, space),
     ),
     seqRightParser(charP(":"), seqRightParser(space, jsonValue)),
