@@ -145,13 +145,62 @@ const sepBy = <A, B>(element: Parser<A>, sep: Parser<B>): Parser<List<A>> =>
 
 export const optional = <A>(p: Parser<A>): Parser<Maybe<A>> =>
   altParser(fmapParser(Just, p), pureParser(Nothing));
+export const lookahead =
+  <A>(p: Parser<A>): Parser<A> =>
+  (input) =>
+    p(input)(Nothing, (r) => Just(pair(input, snd(r))));
 
 // helper parsers
 
-const isSpace = (x: string) => x === " ";
+const isSpace = (x: string) => x === " " || x === "\n" || x === "\t";
 export const space = manyParser(satisfyP(isSpace));
 
 const isDigit = (x: string) => /\d/.test(x);
+const isUnescapedChar = (a: string) => !/["\\\b\f\n\r\t]/.test(a);
+const isHexDigit = (a: string) => /[0-9A-Fa-f]/.test(a);
+
+const unicodeEscape = fmapParser(
+  (xs: List<string>) => String.fromCharCode(parseInt(listToStr(xs), 16)),
+  apRightParser(
+    charP("u"),
+    apParser(
+      apParser(
+        apParser(
+          fmapParser(
+            (a) => (b) => (c) => (d) =>
+              Cons(a, Cons(b, Cons(c, Cons(d, Nil as List<string>)))),
+            satisfyP(isHexDigit),
+          ),
+          satisfyP(isHexDigit),
+        ),
+        satisfyP(isHexDigit),
+      ),
+      satisfyP(isHexDigit),
+    ),
+  ),
+);
+
+const escapeMap: { [key: string]: string } = {
+  '"': '"',
+  "\\": "\\",
+  "/": "/",
+  b: "\b",
+  f: "\f",
+  n: "\n",
+  r: "\r",
+  t: "\t",
+};
+
+const escapedChar = apRightParser(
+  charP("\\"),
+  altParser(
+    fmapParser(
+      (c) => escapeMap[c],
+      satisfyP((c) => Object.hasOwn(escapeMap, c)),
+    ),
+    unicodeEscape,
+  ),
+);
 
 // JSON parser
 
@@ -164,7 +213,10 @@ export type JsonValue =
   | JsonValue[];
 
 const stringLiteral = apLeftParser(
-  apRightParser(charP('"'), manyParser(satisfyP((a) => a !== '"'))),
+  apRightParser(
+    charP('"'),
+    manyParser(altParser(satisfyP(isUnescapedChar), escapedChar)),
+  ),
   charP('"'),
 );
 

@@ -28,6 +28,25 @@ Deno.test("should return string for good input", () => {
   );
 });
 
+for (const [input, result] of [
+  ['"yay\\n"', "yay\n"],
+  ['"\\u0061"', "a"],
+  ['"\\u0061bc"', "abc"],
+  ['"\\u0061bc"aa', "abc"],
+]) {
+  Deno.test(
+    `should return string '${result}' for input with escape '${input}'`,
+    () => {
+      const thing = strToList(input);
+
+      assertEquals(
+        jsonValue(thing)(sentinel, (x) => snd(x)),
+        result,
+      );
+    },
+  );
+}
+
 Deno.test("should return remaining input", () => {
   const thing = strToList('"yay2"rest');
 
