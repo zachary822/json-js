@@ -1,10 +1,7 @@
 // Church encoded types
 
 export type Maybe<A> = <R>(nothing: R, just: (r: A) => R) => R;
-export const Just =
-  <A>(x: A): Maybe<A> =>
-  (_nothing, just) =>
-    just(x);
+export const Just = <A>(x: A): Maybe<A> => (_nothing, just) => just(x);
 // deno-lint-ignore no-explicit-any
 export const Nothing: Maybe<any> = (nothing, _just) => nothing;
 
@@ -16,10 +13,7 @@ export const altMaybe = <A>(ma: Maybe<A>, mb: Maybe<A>): Maybe<A> =>
   ma(mb, (x) => Just(x));
 
 export type Pair<A, B> = <R>(f: (a: A, b: B) => R) => R;
-export const pair =
-  <A, B>(a: A, b: B): Pair<A, B> =>
-  (f) =>
-    f(a, b);
+export const pair = <A, B>(a: A, b: B): Pair<A, B> => (f) => f(a, b);
 
 export const fst = <A, B>(p: Pair<A, B>) => p((a, _b) => a);
 export const snd = <A, B>(p: Pair<A, B>) => p((_a, b) => b);
@@ -29,10 +23,8 @@ export const fmapPair = <A, B, R>(f: (a: B) => R, p: Pair<A, B>): Pair<A, R> =>
 export type List<A> = <R>(cons: (a: A, r: R) => R, nil: R) => R;
 // deno-lint-ignore no-explicit-any
 export const Nil: List<any> = (_cons, nil) => nil;
-export const Cons =
-  <A>(x: A, xs: List<A>): List<A> =>
-  (cons, nil) =>
-    cons(x, xs(cons, nil));
+export const Cons = <A>(x: A, xs: List<A>): List<A> => (cons, nil) =>
+  cons(x, xs(cons, nil));
 
 export const maybeHead = <A>(xs: List<A>): Maybe<A> =>
   xs((h, _t) => Just(h), Nothing);
@@ -43,10 +35,8 @@ export const tail = <A>(xs: List<A>): List<A> =>
     (_flag: boolean) => Nil,
   )(true);
 export const length = <A>(xs: List<A>): number => xs((_h, t) => 1 + t, 0);
-export const append =
-  <A>(xs: List<A>, ys: List<A>): List<A> =>
-  (cons, nil) =>
-    xs(cons, ys(cons, nil));
+export const append = <A>(xs: List<A>, ys: List<A>): List<A> => (cons, nil) =>
+  xs(cons, ys(cons, nil));
 export const reverse = <A>(xs: List<A>): List<A> =>
   xs((h, t) => append(t, Cons(h, Nil)), Nil);
 export const take = <A>(n: number, xs: List<A>): List<A> =>
@@ -75,29 +65,19 @@ export const listToStr = (xs: List<string>) => xs((y, ys) => y + ys, "");
 export type Parser<A> = (input: List<string>) => Maybe<Pair<List<string>, A>>;
 
 export const fmapParser =
-  <A, R>(f: (a: A) => R, p: Parser<A>): Parser<R> =>
-  (input: List<string>) =>
+  <A, R>(f: (a: A) => R, p: Parser<A>): Parser<R> => (input: List<string>) =>
     fmapMaybe((b) => fmapPair(f, b), p(input));
 
-const flip =
-  <A, B, R>(f: (a: A) => (b: B) => R) =>
-  (b: B) =>
-  (a: A) =>
-    f(a)(b);
-const constFunc =
-  <A, B>(a: A) =>
-  (_b: B): A =>
-    a;
+const flip = <A, B, R>(f: (a: A) => (b: B) => R) => (b: B) => (a: A) => f(a)(b);
+const constFunc = <A, B>(a: A) => (_b: B): A => a;
 
-export const pureParser =
-  <A>(a: A): Parser<A> =>
-  (input) =>
-    Just(pair(input, a));
+export const pureParser = <A>(a: A): Parser<A> => (input) =>
+  Just(pair(input, a));
 export const apParser =
-  <A, B>(pf: Parser<(a: A) => B>, px: Parser<A>): Parser<B> =>
-  (input) =>
-    pf(input)(Nothing, (a) =>
-      px(fst(a))(Nothing, (b) => Just(pair(fst(b), snd(a)(snd(b))))),
+  <A, B>(pf: Parser<(a: A) => B>, px: Parser<A>): Parser<B> => (input) =>
+    pf(input)(
+      Nothing,
+      (a) => px(fst(a))(Nothing, (b) => Just(pair(fst(b), snd(a)(snd(b))))),
     );
 
 export const apLeftParser = <A, B>(pa: Parser<A>, pb: Parser<B>): Parser<A> =>
@@ -107,30 +87,27 @@ export const apRightParser = <A, B>(pa: Parser<A>, pb: Parser<B>): Parser<B> =>
 
 export const emptyParser = (_input: List<string>) => Nothing;
 export const altParser =
-  <A>(p1: Parser<A>, p2: Parser<A>): Parser<A> =>
-  (input: List<string>) =>
+  <A>(p1: Parser<A>, p2: Parser<A>): Parser<A> => (input: List<string>) =>
     altMaybe(p1(input), p2(input));
 export const manyParser = <A>(v: Parser<A>): Parser<List<A>> =>
   altParser(someParser(v), pureParser(Nil));
-export const someParser =
-  <A>(v: Parser<A>): Parser<List<A>> =>
-  (input) =>
-    v(input)(Nothing, (first) => {
-      const remainingInput = fst(first);
+export const someParser = <A>(v: Parser<A>): Parser<List<A>> => (input) =>
+  v(input)(Nothing, (first) => {
+    const remainingInput = fst(first);
 
-      return length(remainingInput) >= length(input)
-        ? Nothing
-        : manyParser(v)(remainingInput)(
-            Just(pair(remainingInput, Cons(snd(first), Nil))),
-            (rest) => Just(pair(fst(rest), Cons(snd(first), snd(rest)))),
-          );
-    });
+    return length(remainingInput) >= length(input)
+      ? Nothing
+      : manyParser(v)(remainingInput)(
+        Just(pair(remainingInput, Cons(snd(first), Nil))),
+        (rest) => Just(pair(fst(rest), Cons(snd(first), snd(rest)))),
+      );
+  });
 
 export const satisfyP =
-  (f: (a: string) => boolean): Parser<string> =>
-  (input) =>
-    maybeHead(input)(Nothing, (h) =>
-      f(h) ? Just(pair(tail(input), h)) : Nothing,
+  (f: (a: string) => boolean): Parser<string> => (input) =>
+    maybeHead(input)(
+      Nothing,
+      (h) => f(h) ? Just(pair(tail(input), h)) : Nothing,
     );
 
 export const sequenceAListParser = <A>(xs: List<Parser<A>>): Parser<List<A>> =>
@@ -155,10 +132,8 @@ const sepBy = <A, B>(element: Parser<A>, sep: Parser<B>): Parser<List<A>> =>
 
 export const optional = <A>(p: Parser<A>): Parser<Maybe<A>> =>
   altParser(fmapParser(Just, p), pureParser(Nothing));
-export const lookahead =
-  <A>(p: Parser<A>): Parser<A> =>
-  (input) =>
-    p(input)(Nothing, (r) => Just(pair(input, snd(r))));
+export const lookahead = <A>(p: Parser<A>): Parser<A> => (input) =>
+  p(input)(Nothing, (r) => Just(pair(input, snd(r))));
 
 // helper parsers
 

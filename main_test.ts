@@ -1,11 +1,11 @@
 import { assertEquals, assertStrictEquals } from "@std/assert";
 import {
-  strToList,
-  jsonValue,
-  snd,
   fst,
-  listToStr,
   JsonValue,
+  jsonValue,
+  listToStr,
+  snd,
+  strToList,
 } from "./main.ts";
 
 const sentinel = {} as JsonValue;
@@ -28,12 +28,14 @@ Deno.test("should return string for good input", () => {
   );
 });
 
-for (const [input, result] of [
-  ['"yay\\n"', "yay\n"],
-  ['"\\u0061"', "a"],
-  ['"\\u0061bc"', "abc"],
-  ['"\\u0061bc"aa', "abc"],
-]) {
+for (
+  const [input, result] of [
+    ['"yay\\n"', "yay\n"],
+    ['"\\u0061"', "a"],
+    ['"\\u0061bc"', "abc"],
+    ['"\\u0061bc"aa', "abc"],
+  ]
+) {
   Deno.test(
     `should return string '${result}' for input with escape '${input}'`,
     () => {

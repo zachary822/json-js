@@ -9,9 +9,9 @@ const maybeParse = jsonValue(input);
 
 // retrieving the value from Maybe
 const result = maybeParse(
-    // result if Nothing
-    null,
-    // result if Just (remaning, result)
-    (x) => snd(x)
-)
+  // result if Nothing
+  null,
+  // result if Just (remaning, result)
+  (x) => snd(x),
+);
 ```
