@@ -15,8 +15,8 @@ export const altMaybe = <A>(ma: Maybe<A>, mb: Maybe<A>): Maybe<A> =>
 export type Pair<A, B> = <R>(f: (a: A, b: B) => R) => R;
 export const Pair = <A, B>(a: A, b: B): Pair<A, B> => (f) => f(a, b);
 
-export const fst = <A, B>(p: Pair<A, B>) => p((a, _b) => a);
-export const snd = <A, B>(p: Pair<A, B>) => p((_a, b) => b);
+export const fst = <A, B>(p: Pair<A, B>): A => p((a, _b) => a);
+export const snd = <A, B>(p: Pair<A, B>): B => p((_a, b) => b);
 export const fmapPair = <A, B, R>(f: (a: B) => R, p: Pair<A, B>): Pair<A, R> =>
   Pair(fst(p), f(snd(p)));
 
@@ -58,7 +58,8 @@ export const listToArray = <A>(list: List<A>): A[] =>
 
 export const strToList = (s: string): List<string> =>
   arrayToList(Array.from(s));
-export const listToStr = (xs: List<string>) => xs((y, ys) => y + ys, "");
+export const listToStr = (xs: List<string>): string =>
+  xs((y, ys) => y + ys, "");
 
 // Parser combinator
 
@@ -120,7 +121,7 @@ export const sequenceAListParser = <A>(xs: List<Parser<A>>): Parser<List<A>> =>
     pureParser(Nil as List<A>),
   );
 
-export const charP = (x: string) => satisfyP((i) => x === i);
+export const charP = (x: string): Parser<string> => satisfyP((i) => x === i);
 export const stringP = (xs: List<string>): Parser<List<string>> =>
   sequenceAListParser(fmapList(charP, xs));
 
@@ -137,8 +138,8 @@ export const lookahead = <A>(p: Parser<A>): Parser<A> => (input) =>
 
 // helper parsers
 
-const isSpace = (x: string) => /\s/.test(x);
-export const space = manyParser(satisfyP(isSpace));
+const isSpace = (x: string): boolean => /\s/.test(x);
+export const space: Parser<List<string>> = manyParser(satisfyP(isSpace));
 
 const isDigit = (x: string) => /\d/.test(x);
 const isUnescapedChar = (a: string) => !/["\\\b\f\n\r\t]/.test(a);
