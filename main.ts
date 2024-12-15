@@ -100,20 +100,21 @@ export const altParser =
   <A>(p1: Parser<A>, p2: Parser<A>): Parser<A> =>
   (input: List<string>) =>
     altMaybe(p1(input), p2(input));
-export const manyParser =
-  <A>(v: Parser<A>): Parser<List<A>> =>
-  (input) => {
-    const go = (
-      acc: List<A>,
-      inp: List<string>,
-    ): Maybe<Pair<List<string>, List<A>>> =>
-      v(inp)(Just(pair(inp, reverse(acc))), (j) =>
-        go(Cons(snd(j), acc), fst(j)),
-      );
-
-    return go(Nil, input);
-  };
-
+export const manyParser = <A>(p: Parser<A>): Parser<List<A>> =>
+  altParser(
+    (input: List<string>) =>
+      p(input)(Nothing, (first) => {
+        const remainingInput = fst(first);
+        const firstResult = snd(first);
+        if (length(remainingInput) >= length(input)) {
+          return Nothing;
+        }
+        return manyParser(p)(remainingInput)(Nothing, (rest) =>
+          Just(pair(fst(rest), Cons(firstResult, snd(rest)))),
+        );
+      }),
+    pureParser(Nil),
+  );
 export const satisfyP =
   (f: (a: string) => boolean): Parser<string> =>
   (input) => {
@@ -155,7 +156,7 @@ const jsonBool: Parser<JsonValue> = altParser(
 
 const jsonValue: Parser<JsonValue> = altParser(jsonString, jsonBool);
 
-const thing = strToList('"yay2');
+const thing = strToList('"yay2"');
 
 console.log(
   jsonValue(thing)(
