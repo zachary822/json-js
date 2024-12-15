@@ -136,10 +136,7 @@ export const stringP = (xs: List<string>): Parser<List<string>> =>
 
 // JSON parser
 
-type JsonString = string;
-type JsonBool = boolean;
-
-type JsonValue = JsonString | JsonBool;
+type JsonValue = string | boolean | null;
 
 const jsonString: Parser<JsonValue> = fmapParser(
   listToStr,
@@ -154,4 +151,12 @@ const jsonBool: Parser<JsonValue> = altParser(
   apRightParser(stringP(strToList("false")), pureParser(false)),
 );
 
-export const jsonValue: Parser<JsonValue> = altParser(jsonString, jsonBool);
+const jsonNull: Parser<JsonValue> = apRightParser(
+  stringP(strToList("null")),
+  pureParser(null),
+);
+
+export const jsonValue: Parser<JsonValue> = altParser(
+  altParser(jsonString, jsonBool),
+  jsonNull,
+);
