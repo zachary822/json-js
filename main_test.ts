@@ -1,7 +1,7 @@
 import { assertEquals, assertStrictEquals } from "@std/assert";
 import {
   fst,
-  JsonValue,
+  type JsonValue,
   jsonValue,
   listToStr,
   snd,
