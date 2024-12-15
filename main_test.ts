@@ -1,7 +1,14 @@
 import { assertEquals, assertStrictEquals } from "@std/assert";
-import { strToList, jsonValue, snd, fst, listToStr } from "./main.ts";
+import {
+  strToList,
+  jsonValue,
+  snd,
+  fst,
+  listToStr,
+  JsonValue,
+} from "./main.ts";
 
-const sentinel = new Object();
+const sentinel = {} as JsonValue;
 
 Deno.test("should return null for bad input", () => {
   const thing = strToList('"yay');
@@ -49,3 +56,57 @@ for (const s of ["true", "false"]) {
     );
   });
 }
+
+Deno.test("should return array for good input", () => {
+  const thing = strToList('[  true, "yay", 12, -12 ]');
+
+  assertEquals(
+    jsonValue(thing)(sentinel, (x) => snd(x)),
+    [true, "yay", 12, -12],
+  );
+});
+
+Deno.test("should return int for good input", () => {
+  const thing = strToList("123abc");
+
+  assertEquals(
+    jsonValue(thing)(sentinel, (x) => snd(x)),
+    123,
+  );
+});
+
+Deno.test("should return float for good input", () => {
+  const thing = strToList("123.25abc");
+
+  assertEquals(
+    jsonValue(thing)(sentinel, (x) => snd(x)),
+    123.25,
+  );
+});
+
+Deno.test("should return float with exponent for good input", () => {
+  const thing = strToList("1.2e-2abc");
+
+  assertEquals(
+    jsonValue(thing)(sentinel, (x) => snd(x)),
+    0.012,
+  );
+});
+
+Deno.test("should return object for good input", () => {
+  const thing = strToList('{ "abc" : 123   }');
+
+  assertEquals(
+    jsonValue(thing)(sentinel, (x) => snd(x)),
+    { abc: 123 },
+  );
+});
+
+Deno.test("should return sentinel for bad input", () => {
+  const thing = strToList('{"abc": }');
+
+  assertStrictEquals(
+    jsonValue(thing)(sentinel, (x) => snd(x)),
+    sentinel,
+  );
+});

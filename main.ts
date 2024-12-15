@@ -51,10 +51,13 @@ export const reverse = <A>(xs: List<A>): List<A> =>
 export const fmapList = <A, B>(f: (a: A) => B, xs: List<A>): List<B> =>
   xs((h, t) => Cons(f(h), t), Nil);
 
+export const arrayToList = <A>(arr: A[]): List<A> =>
+  arr.toReversed().reduce((xs, x) => Cons(x, xs), Nil as List<A>);
+export const listToArray = <A>(list: List<A>): A[] =>
+  list((x, xs) => [x].concat(xs), [] as A[]);
+
 export const strToList = (s: string): List<string> =>
-  Array.from(s)
-    .toReversed()
-    .reduce((xs, x) => Cons(x, xs), Nil as List<string>);
+  arrayToList(Array.from(s));
 export const listToStr = (xs: List<string>) => xs((y, ys) => y + ys, "");
 
 // Parser combinator
@@ -134,29 +137,144 @@ export const charP = (x: string) => satisfyP((i) => x === i);
 export const stringP = (xs: List<string>): Parser<List<string>> =>
   sequenceAListParser(fmapList(charP, xs));
 
+const sepBy = <A, B>(element: Parser<A>, sep: Parser<B>): Parser<List<A>> =>
+  apParser(
+    fmapParser((x) => (xs: List<A>) => Cons(x, xs), element),
+    manyParser(apRightParser(sep, element)),
+  );
+
+export const optional = <A>(p: Parser<A>): Parser<Maybe<A>> =>
+  altParser(fmapParser(Just, p), pureParser(Nothing));
+
+// helper parsers
+
+const isSpace = (x: string) => x === " ";
+export const space = manyParser(satisfyP(isSpace));
+
+const isDigit = (x: string) => /\d/.test(x);
+
 // JSON parser
 
-type JsonValue = string | boolean | null;
+export type JsonValue =
+  | string
+  | boolean
+  | number
+  | null
+  | { [key: string]: JsonValue }
+  | JsonValue[];
 
-const jsonString: Parser<JsonValue> = fmapParser(
-  listToStr,
-  apLeftParser(
-    apRightParser(charP('"'), manyParser(satisfyP((a) => a !== '"'))),
-    charP('"'),
-  ),
+const stringLiteral = apLeftParser(
+  apRightParser(charP('"'), manyParser(satisfyP((a) => a !== '"'))),
+  charP('"'),
 );
 
-const jsonBool: Parser<JsonValue> = altParser(
+const jsonString: Parser<JsonValue> = fmapParser(listToStr, stringLiteral);
+
+const jsonBool = altParser(
   apRightParser(stringP(strToList("true")), pureParser(true)),
   apRightParser(stringP(strToList("false")), pureParser(false)),
 );
 
-const jsonNull: Parser<JsonValue> = apRightParser(
-  stringP(strToList("null")),
-  pureParser(null),
+const intLiteral = apParser(
+  fmapParser(
+    (m: Maybe<string>) => (xs: List<string>) => m(xs, (x) => Cons(x, xs)),
+    optional(charP("-")),
+  ),
+  someParser(satisfyP(isDigit)),
+);
+
+const fractionLiteral = apParser(
+  fmapParser(
+    (m: Maybe<string>) => (xs: List<string>) => m(xs, (x) => Cons(x, xs)),
+    optional(charP(".")),
+  ),
+  someParser(satisfyP(isDigit)),
+);
+
+const exponentLiteral = apParser(
+  fmapParser(
+    (m: Maybe<string>) => (xs: List<string>) => m(xs, (x) => Cons(x, xs)),
+    optional(altParser(charP("e"), charP("E"))),
+  ),
+  apParser(
+    fmapParser(
+      (m: Maybe<string>) => (xs: List<string>) => m(xs, (x) => Cons(x, xs)),
+      optional(altParser(charP("-"), charP("+"))),
+    ),
+    someParser(satisfyP(isDigit)),
+  ),
+);
+
+const jsonNumber = fmapParser(
+  (xs: List<string>) => +listToStr(xs),
+  apParser(
+    fmapParser(
+      (xs: List<string>) => (mys: Maybe<List<string>>) =>
+        mys(xs, (ys: List<string>) => append(xs, ys)),
+      apParser(
+        fmapParser(
+          (xs) => (mys: Maybe<List<string>>) =>
+            mys(xs, (ys: List<string>) => append(xs, ys)),
+          intLiteral,
+        ),
+        optional(fractionLiteral),
+      ),
+    ),
+    optional(exponentLiteral),
+  ),
+);
+
+const jsonNull = apRightParser(stringP(strToList("null")), pureParser(null));
+
+const jsonArray: Parser<JsonValue[]> = (input) =>
+  fmapParser(
+    (xs: List<JsonValue>) => listToArray(xs),
+    apLeftParser(
+      apRightParser(
+        charP("["),
+        apRightParser(
+          space,
+          sepBy(
+            jsonValue,
+            apLeftParser(apRightParser(space, charP(",")), space),
+          ),
+        ),
+      ),
+      apLeftParser(space, charP("]")),
+    ),
+  )(input);
+
+const kvPair = (input: List<string>) =>
+  apParser(
+    fmapParser(
+      (k: List<string>) => (v: JsonValue) => pair(k, v),
+      apLeftParser(stringLiteral, space),
+    ),
+    apRightParser(charP(":"), apRightParser(space, jsonValue)),
+  )(input);
+
+const jsonObject = fmapParser(
+  (xs: List<Pair<List<string>, JsonValue>>) =>
+    xs(
+      (h, t) => ({ ...t, [listToStr(fst(h))]: snd(h) }),
+      {} as { [key: string]: JsonValue },
+    ),
+  apLeftParser(
+    apLeftParser(
+      apRightParser(
+        apRightParser(charP("{"), space),
+        sepBy(kvPair, apRightParser(space, apLeftParser(charP(","), space))),
+      ),
+      space,
+    ),
+    charP("}"),
+  ),
 );
 
 export const jsonValue: Parser<JsonValue> = altParser(
-  altParser(jsonString, jsonBool),
-  jsonNull,
+  altParser(
+    altParser(altParser(altParser(jsonString, jsonBool), jsonNull), jsonNumber),
+    jsonArray,
+  ),
+  jsonObject,
 );
