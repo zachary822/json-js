@@ -8,9 +8,18 @@ export const Nothing: Maybe<any> = (nothing, _just) => nothing;
 export const fmapMaybe = <A, R>(f: (a: A) => R, m: Maybe<A>): Maybe<R> =>
   m(Nothing as Maybe<R>, (x) => Just(f(x)));
 
+export const pureMaybe = Just;
+export const apMaybe = <A, B>(mf: Maybe<(a: A) => B>, ma: Maybe<A>): Maybe<B> =>
+  mf(Nothing, (f) => fmapMaybe(f, ma));
+
+export const bindMaybe = <A, B>(
+  ma: Maybe<A>,
+  f: (a: A) => Maybe<B>,
+): Maybe<B> => ma(Nothing, f);
+
 export const emptyMaybe = Nothing;
 export const altMaybe = <A>(ma: Maybe<A>, mb: Maybe<A>): Maybe<A> =>
-  ma(mb, (x) => Just(x));
+  ma(mb, Just);
 
 export type Pair<A, B> = <R>(f: (a: A, b: B) => R) => R;
 export const Pair = <A, B>(a: A, b: B): Pair<A, B> => (f) => f(a, b);
@@ -35,7 +44,7 @@ export const append = <A>(xs: List<A>, ys: List<A>): List<A> => (cons, nil) =>
 export const reverse = <A>(xs: List<A>): List<A> =>
   xs((h, t) => append(t, Cons(h, Nil)), Nil);
 export const take = <A>(n: number, xs: List<A>): List<A> =>
-  n === 0 ? Nil : xs((h, t) => Cons(h, take(n - 1, t)), Nil);
+  n <= 0 ? Nil : xs((h, t) => Cons(h, take(n - 1, t)), Nil);
 export const drop = <A>(n: number, xs: List<A>): List<A> =>
   xs(
     (x: A, f: (n: number) => List<A>) => (i: number) =>
@@ -107,7 +116,7 @@ export const altParser =
 export const manyParser = <A>(v: Parser<A>): Parser<List<A>> =>
   altParser(someParser(v), pureParser(Nil));
 export const someParser = <A>(v: Parser<A>): Parser<List<A>> => (input) =>
-  v(input)(Nothing, (first) => {
+  bindMaybe(v(input), (first) => {
     const remainingInput = fst(first);
 
     return length(remainingInput) >= length(input)
@@ -130,8 +139,8 @@ export const sequenceAListParser = <A>(xs: List<Parser<A>>): Parser<List<A>> =>
 
 export const satisfyP =
   (f: (a: string) => boolean): Parser<string> => (input) =>
-    maybeHead(input)(
-      Nothing,
+    bindMaybe(
+      maybeHead(input),
       (h) => f(h) ? Just(Pair(tail(input), h)) : Nothing,
     );
 export const charP = (x: string): Parser<string> => satisfyP((i) => x === i);
@@ -147,7 +156,7 @@ const sepBy = <A, B>(element: Parser<A>, sep: Parser<B>): Parser<List<A>> =>
 export const optional = <A>(p: Parser<A>): Parser<Maybe<A>> =>
   altParser(fmapParser(Just, p), pureParser(Nothing));
 export const lookAhead = <A>(p: Parser<A>): Parser<A> => (input) =>
-  p(input)(Nothing, (r) => Just(Pair(input, snd(r))));
+  fmapMaybe((r) => Pair(input, snd(r)), p(input));
 export const count = <A>(n: number, p: Parser<A>): Parser<List<A>> =>
   sequenceAListParser(replicate(n, p));
 
@@ -206,13 +215,12 @@ const escapedChar = seqRightParser(
   charP("\\"),
   altParser(
     (input) =>
-      maybeHead(input)(
-        Nothing,
-        (h) =>
-          lookup(h, escapeMap)(
-            Nothing,
-            (v) => Just(Pair(tail(input), v)),
-          ),
+      fmapMaybe(
+        (c: string) => Pair(tail(input), c),
+        bindMaybe(
+          maybeHead(input),
+          (h) => lookup(h, escapeMap),
+        ),
       ),
     unicodeEscape,
   ),
