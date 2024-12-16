@@ -99,9 +99,9 @@ export const pureParser = <A>(a: A): Parser<A> => (input) =>
   Just(Pair(input, a));
 export const apParser =
   <A, B>(pf: Parser<(a: A) => B>, px: Parser<A>): Parser<B> => (input) =>
-    pf(input)(
-      Nothing,
-      (a) => px(fst(a))(Nothing, (b) => Just(Pair(fst(b), snd(a)(snd(b))))),
+    bindMaybe(
+      pf(input),
+      (a) => fmapMaybe((b) => Pair(fst(b), snd(a)(snd(b))), px(fst(a))),
     );
 
 export const seqLeftParser = <A, B>(pa: Parser<A>, pb: Parser<B>): Parser<A> =>
@@ -159,6 +159,8 @@ export const lookAhead = <A>(p: Parser<A>): Parser<A> => (input) =>
   fmapMaybe((r) => Pair(input, snd(r)), p(input));
 export const count = <A>(n: number, p: Parser<A>): Parser<List<A>> =>
   sequenceAListParser(replicate(n, p));
+export const choice = <A>(ps: List<Parser<A>>): Parser<A> =>
+  ps((h, t) => altParser(h, t), emptyParser);
 
 // helper parsers
 
@@ -359,10 +361,12 @@ const jsonObject = fmapParser(
   ),
 );
 
-export const jsonValue: Parser<JsonValue> = altParser(
-  altParser(
-    altParser(altParser(altParser(jsonString, jsonBool), jsonNull), jsonNumber),
-    jsonArray,
+export const jsonValue: Parser<JsonValue> = choice(
+  Cons(
+    jsonString,
+    Cons(
+      jsonNumber,
+      Cons(jsonObject, Cons(jsonArray, Cons(jsonBool, Cons(jsonNull, Nil)))),
+    ),
   ),
-  jsonObject,
 );
