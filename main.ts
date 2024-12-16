@@ -1,5 +1,8 @@
 // Church encoded types
 
+export type Unit = <R>(r: R) => R;
+export const Unit: Unit = (r) => r;
+
 export type Maybe<A> = <R>(nothing: R, just: (r: A) => R) => R;
 export const Just = <A>(x: A): Maybe<A> => (_nothing, just) => just(x);
 // deno-lint-ignore no-explicit-any
@@ -152,6 +155,9 @@ const sepBy = <A, B>(element: Parser<A>, sep: Parser<B>): Parser<List<A>> =>
     fmapParser(curry(Cons<A>), element),
     manyParser(seqRightParser(sep, element)),
   );
+
+export const eof: Parser<Unit> = (input) =>
+  length(input) > 0 ? Nothing : Just(Pair(input, Unit));
 
 export const optional = <A>(p: Parser<A>): Parser<Maybe<A>> =>
   altParser(fmapParser(Just, p), pureParser(Nothing));
