@@ -28,12 +28,7 @@ export const Cons = <A>(x: A, xs: List<A>): List<A> => (cons, nil) =>
 
 export const maybeHead = <A>(xs: List<A>): Maybe<A> =>
   xs((h, _t) => Just(h), Nothing);
-export const tail = <A>(xs: List<A>): List<A> =>
-  xs(
-    (x: A, acc: (flag: boolean) => List<A>) => (flag: boolean) =>
-      flag ? acc(false) : Cons(x, acc(false)),
-    constFunc(Nil),
-  )(true);
+export const tail = <A>(xs: List<A>): List<A> => drop(1, xs);
 export const length = <A>(xs: List<A>): number => xs((_h, t) => 1 + t, 0);
 export const append = <A>(xs: List<A>, ys: List<A>): List<A> => (cons, nil) =>
   xs(cons, ys(cons, nil));
