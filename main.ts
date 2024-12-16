@@ -53,6 +53,10 @@ export const replicate = <A>(n: number, element: A): List<A> =>
 export const fmapList = <A, B>(f: (a: A) => B, xs: List<A>): List<B> =>
   xs((h, t) => Cons(f(h), t), Nil);
 
+export const pureList = <A>(a: A): List<A> => Cons(a, Nil);
+export const apList = <A, B>(af: List<(a: A) => B>, ax: List<A>): List<B> =>
+  af((f, t) => append(fmapList(f, ax), t), Nil);
+
 export const arrayToList = <A>(arr: A[]): List<A> =>
   arr.toReversed().reduce((xs, x) => Cons(x, xs), Nil as List<A>);
 export const listToArray = <A>(list: List<A>): A[] =>
@@ -158,6 +162,7 @@ const isSpace = (x: string): boolean => /[ \n\r\t]/.test(x);
 export const space: Parser<List<string>> = manyParser(satisfyP(isSpace));
 
 const isDigit = (x: string) => /\d/.test(x);
+const isNonZeroDigit = (x: string) => /[1-9]/.test(x);
 const isUnescapedChar = (a: string) => !/["\\\b\f\n\r\t]/.test(a);
 const isHexDigit = (a: string) => /[0-9A-Fa-f]/.test(a);
 
@@ -248,21 +253,33 @@ const intLiteral = apParser(
     (m: Maybe<string>) => (xs: List<string>) => m(xs, (x) => Cons(x, xs)),
     optional(charP("-")),
   ),
-  someParser(satisfyP(isDigit)),
+  altParser(
+    fmapParser(
+      pureList,
+      charP("0"),
+    ),
+    apParser(
+      fmapParser(
+        curry(Cons<string>),
+        satisfyP(isNonZeroDigit),
+      ),
+      manyParser(satisfyP(isDigit)),
+    ),
+  ),
 );
 
 const fractionLiteral = apParser(
   fmapParser(
-    (m: Maybe<string>) => (xs: List<string>) => m(xs, (x) => Cons(x, xs)),
-    optional(charP(".")),
+    curry(Cons<string>),
+    charP("."),
   ),
   someParser(satisfyP(isDigit)),
 );
 
 const exponentLiteral = apParser(
   fmapParser(
-    (m: Maybe<string>) => (xs: List<string>) => m(xs, (x) => Cons(x, xs)),
-    optional(altParser(charP("e"), charP("E"))),
+    curry(Cons<string>),
+    altParser(charP("e"), charP("E")),
   ),
   apParser(
     fmapParser(

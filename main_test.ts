@@ -79,11 +79,20 @@ for (const s of ["true", "false"]) {
 }
 
 Deno.test("should return array for good input", () => {
-  const thing = strToList('[  true, "yay", 12, -12 ]');
+  const thing = strToList('[  true, "yay", 12, -12, 0.12, 1.2e-1 ]');
 
   assertEquals(
     jsonValue(thing)(sentinel, (x) => snd(x)),
-    [true, "yay", 12, -12],
+    [true, "yay", 12, -12, 0.12, 0.12],
+  );
+});
+
+Deno.test("should return sentinel for array with bad number", () => {
+  const thing = strToList('[  true, "yay", 12, -012 ]');
+
+  assertStrictEquals(
+    jsonValue(thing)(sentinel, (x) => snd(x)),
+    sentinel,
   );
 });
 
@@ -102,6 +111,15 @@ Deno.test("should return float for good input", () => {
   assertEquals(
     jsonValue(thing)(sentinel, (x) => snd(x)),
     123.25,
+  );
+});
+
+Deno.test("should return 0 for number with leading 0", () => {
+  const thing = strToList("0123.25abc");
+
+  assertEquals(
+    jsonValue(thing)(sentinel, (x) => snd(x)),
+    0,
   );
 });
 
