@@ -42,7 +42,7 @@ export const length = <A>(xs: List<A>): number => xs((_h, t) => 1 + t, 0);
 export const append = <A>(xs: List<A>, ys: List<A>): List<A> => (cons, nil) =>
   xs(cons, ys(cons, nil));
 export const reverse = <A>(xs: List<A>): List<A> =>
-  xs((h, t) => append(t, Cons(h, Nil)), Nil);
+  xs((h, t) => append(t, pureList(h)), Nil);
 export const take = <A>(n: number, xs: List<A>): List<A> =>
   n <= 0 ? Nil : xs((h, t) => Cons(h, take(n - 1, t)), Nil);
 export const drop = <A>(n: number, xs: List<A>): List<A> =>
@@ -57,7 +57,7 @@ export const replicate = <A>(n: number, element: A): List<A> =>
 export const fmapList = <A, B>(f: (a: A) => B, xs: List<A>): List<B> =>
   xs((h, t) => Cons(f(h), t), Nil);
 
-export const pureList = <A>(a: A): List<A> => Cons(a, Nil);
+export const pureList = <A>(a: A): List<A> => Cons(a, Nil as List<A>);
 export const apList = <A, B>(af: List<(a: A) => B>, ax: List<A>): List<B> =>
   af((f, t) => append(fmapList(f, ax), t), Nil);
 
@@ -122,7 +122,7 @@ export const someParser = <A>(v: Parser<A>): Parser<List<A>> => (input) =>
     return length(remainingInput) >= length(input)
       ? Nothing
       : manyParser(v)(remainingInput)(
-        Just(Pair(remainingInput, Cons(snd(first), Nil))),
+        Just(Pair(remainingInput, pureList(snd(first)))),
         (rest) => Just(Pair(fst(rest), Cons(snd(first), snd(rest)))),
       );
   });
@@ -180,8 +180,7 @@ const unicodeEscape = fmapParser(
       apParser(
         apParser(
           fmapParser(
-            (a) => (b) => (c) => (d) =>
-              Cons(a, Cons(b, Cons(c, Cons(d, Nil as List<string>)))),
+            (a) => (b) => (c) => (d) => Cons(a, Cons(b, Cons(c, pureList(d)))),
             satisfyP(isHexDigit),
           ),
           satisfyP(isHexDigit),
