@@ -2,22 +2,6 @@
 
 Parser combinator implemented in church encoded types.
 
-## Included JSON parser
-
-```typescript
-const input = strToList('"abc"');
-
-const maybeParse = jsonValue(input);
-
-// retrieving the value from Maybe
-const result = maybeParse(
-  // default return value if parser doesn't match input
-  null,
-  // the javascript object from the JSON string
-  (x) => snd(x),
-);
-```
-
 ## Example
 
 The library uses a custom `List` type to represent arrays, strings used by the
