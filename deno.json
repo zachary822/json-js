@@ -9,7 +9,8 @@
   },
   "publish": {
     "exclude": [
-      ".github/"
+      ".github/",
+      ".pre-commit-config.yaml"
     ]
   }
 }
