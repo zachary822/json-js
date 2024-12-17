@@ -1,6 +1,6 @@
 {
   "name": "@fun/parser-combinator",
-  "version": "0.1.12",
+  "version": "0.2.0",
   "license": "MIT",
   "exports": "./main.ts",
   "imports": {
