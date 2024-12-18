@@ -1,4 +1,12 @@
-import { satisfyP } from "./main.ts";
+import {
+  apList,
+  Cons,
+  Nil,
+  pureList,
+  replicate,
+  satisfyP,
+  zip,
+} from "./main.ts";
 import { charP, eof, fst, listToStr, snd, stringP, strToList } from "./main.ts";
 import {
   assertSpyCall,
@@ -6,6 +14,20 @@ import {
   assertSpyCalls,
   spy,
 } from "@std/testing/mock";
+import { assert } from "@std/assert";
+
+Deno.test("apList works as expected", () => {
+  const func = (a: number) => a + 1;
+
+  const fs = replicate(2, func);
+  const xs = Cons(1, Cons(2, Cons(3, Nil)));
+  assert(
+    zip(
+      apList(fs, xs),
+      Cons(2, Cons(3, Cons(4, Cons(2, Cons(3, pureList(4)))))),
+    )((h, t) => h((a, b) => a === b) && t, true),
+  );
+});
 
 Deno.test("charP matches input", () => {
   const func = spy();

@@ -57,6 +57,11 @@ export const drop = <A>(n: number, xs: List<A>): List<A> =>
 export const replicate = <A>(n: number, element: A): List<A> =>
   n <= 0 ? Nil : Cons(element, replicate(n - 1, element));
 
+export const zip = <A, B>(xs: List<A>, ys: List<B>): List<Pair<A, B>> =>
+  Pair(maybeHead(xs), maybeHead(ys))((ma, mb) =>
+    bindMaybe(ma, (a) => bindMaybe(mb, (b) => pureMaybe(Pair(a, b))))
+  )(Nil, (p) => Cons(p, zip(tail(xs), tail(ys))));
+
 export const fmapList = <A, B>(f: (a: A) => B, xs: List<A>): List<B> =>
   xs((h, t) => Cons(f(h), t), Nil);
 
